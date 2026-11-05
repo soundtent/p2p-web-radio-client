@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>P2P Web Radio</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+      <span>Signaling status: {{signallingStatus}}</span>
+      <br><br>
+      <span>Sending:</span><br>
+      <audio id="sendingAudioElement" autoplay muted controls src="audio/classic.mp3"></audio>
+      <!-- <audio id="sendingAudioElement" autoplay muted controls src="https://locus.creacast.com:9443/london_camberwell.ogg"></audio> -->
+      <br><br>
+      <span>Receiving:</span>
+      <table>
+          <tr>
+            <th>Peer Id</th>
+            <th>Location</th>
+            <th>Connection</th>
+            <th>Audio</th>
+          </tr>
+          <tr>
+            <td>{{me.id}} (me)</th>
+            <td>{{me.geolocation}}</th>
+            <td></th>
+            <td></th>
+          </tr>
+          <tr v-for="peer in peers">
+          <td>{{ peer.id }}</td>
+          <td>{{ peer.geolocation }}</td>
+          <td>
+            Status: {{ peer.connectionStatus}}<br>
+            <button v-if="peer.connectionStatus=='disconnected'" @click="connect(peer.id)">Connect</button>
+            <button v-else @click="disconnect(peer.id)">Disconnect</button>
+          </td>
+          <td><audio :id="`peerAudio_${ peer.id}`" autoplay controls></audio></td>
+          </tr>
+      </table>
+    </div>
+
+    <script src="js/vue.global.js"></script>
+    <script src="js/jquery.min.js"></script> 
+    <script src="js/socket.io.min.js"></script>
+    <script src="js/connectionHandler.js"></script>
+    <script src="js/signalling.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

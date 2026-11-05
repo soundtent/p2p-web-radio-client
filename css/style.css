@@ -1,0 +1,25 @@
+ @font-face {
+	font-family: futuralight;
+    src: url('../fonts/futura light bt.ttf');
+}
+html,body {
+    padding:0;
+    margin:0;
+    background-color:white;
+    overflow:hidden;
+}
+
+body {
+  font-family: futuralight;
+  font-size: 22px;
+  line-height: 26px;
+}
+
+table {
+    border-collapse: collapse;
+}
+td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
