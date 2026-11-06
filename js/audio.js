@@ -5,6 +5,12 @@ function addRemoteAudio(mediaStream, fromId) {
     //event.streams[0] is a mediaStream object
     if (receivingAudioElement.srcObject !== mediaStream) {
         receivingAudioElement.srcObject = mediaStream;
+
+        receivingAudioElement.play().then(() => {
+            console.log(`Playback started successfully for peer ${fromId}`);
+        }).catch((err) => {
+            console.warn(`Autoplay blocked or failed for peer ${fromId}:`, err);
+        });
     }
 }
 
@@ -29,18 +35,25 @@ function _setupAudioElementCaptureToSend(resolve, reject) {
         resolve();
         return;
     }
+    try {
+        // Ensure context is running (browsers suspend audio contexts until user interaction)
+        if (webAudioAPICtx.state === 'suspended') {
+            webAudioAPICtx.resume();
+        }
 
-    if (sendingAudioElement.captureStream) {
-        sendingAudioSource = sendingAudioElement.captureStream();
-        console.log('Captured stream from sendingAudioElement with captureStream', sendingAudioSource);
+        const sourceNode = webAudioAPICtx.createMediaElementSource(sendingAudioElement);
+        const destinationNode = webAudioAPICtx.createMediaStreamDestination();
+
+        sourceNode.connect(destinationNode);
+
+        //play audio locally through speakers
+        sourceNode.connect(webAudioAPICtx.destination);
+
+        sendingAudioSource = destinationNode.stream;
+        console.log('Captured stream using Web Audio API MediaStreamDestination', sendingAudioSource);
         resolve();
-        return;
-    }
-    if (sendingAudioElement.mozCaptureStream) {
-        sendingAudioSource = sendingAudioElement.mozCaptureStream();
-        console.log('Captured stream from sendingAudioElement with mozCaptureStream()', sendingAudioSource);
-        resolve();
-        return;
+    } catch (err) {
+        reject(new Error('Web Audio API capture setup failed: ' + err.message));
     }
 
     reject(new Error('captureStream() not supported'));

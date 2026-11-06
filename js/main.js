@@ -79,6 +79,8 @@ let frontend = undefined;
 let sendingAudioElement = undefined;
 let sendingAudioSource; // captures the output of sendingAudioElement as MediaStream oject
 
+const webAudioAPICtx = new AudioContext();
+
 const connectionHandlers = []
 const signalling = new Signaling();
 

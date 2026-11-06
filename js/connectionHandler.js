@@ -21,16 +21,20 @@ class WebRTCConnectionHandler {
 
         this._createNewConnection();
         this._pc.ontrack = this._onTrack;
-        this._pc.onsignalingstatechange = (event) => {
+        this._pc.onsignalingstatechange = () => {
             console.log('signaling state: %s', this._pc.signalingState);
         };
 
+
+        // For Safari compatibility: Explicitly add an audio transceiver instead of using legacy offerToReceiveAudio
+        this._pc.addTransceiver('audio', { direction: 'recvonly' });
+
+        // Create an offer and send it to the peer
         console.log('createOffer start');
-        this._pc.createOffer(this._onCreateOfferSuccess.bind(this), (err) => {
+        this._pc.createOffer().then((offer) => {
+            return this._onCreateOfferSuccess(offer);
+        }).catch((err) => {
             console.log('createOffer failed:', err);
-        }, {
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: false
         });
 
     }
@@ -60,13 +64,28 @@ class WebRTCConnectionHandler {
         const sDesc = JSON.stringify(sessionDesc);
         console.log(`created offer: ${sDesc}`);
         console.log('offerer: setLocalDescription start');
-        this._pc.setLocalDescription(sessionDesc, () => {
+        
+        this._pc.setLocalDescription(sessionDesc).then(() => {
             console.log('offerer: setLocalDescription complete');
-        }, (err) => {
+        }).catch((err) => {
             console.log('offerer: setLocalDescription failed:', err);
         });
 
-        signalling.sendOffer(this.peerId, sessionDesc)
+        signalling.sendOffer(this.peerId, sessionDesc);
+    }
+    // When an answer has been created (via onSDPReceived), set it locally and send it to the peer
+    _onCreateAnswerSuccess(sessionDesc) {
+        const sDesc = JSON.stringify(sessionDesc);
+        console.log(`created answer: ${sDesc}`);
+        console.log('setLocalDescription start');
+        
+        this._pc.setLocalDescription(sessionDesc).then(() => {
+            console.log('setLocalDescription complete');
+        }).catch((err) => {
+            console.log('setLocalDescription failed:', err);
+        });
+
+        signalling.sendAnswer(this.peerId, sessionDesc);
     }
 
     // When an incoming SDP arrives (e.g. an offer or an answer), respond if necessary with an answer
@@ -82,16 +101,16 @@ class WebRTCConnectionHandler {
                     console.log('added local stream to pc');
 
                     console.log("remote description:", sessionDesc);
-                    this._pc.setRemoteDescription(sessionDesc, () => {
+                    this._pc.setRemoteDescription(new RTCSessionDescription(sessionDesc)).then(() => {
                         console.log(`setRemoteDescription complete`);
-                    }, (err) => {
-                        console.log(`setRemoteDescription failed:`, err);
-                    });
-
-                    // Create answer
-                    console.log('createAnswer start');
-                    this._pc.createAnswer(this._onCreateAnswerSuccess.bind(this), (err) => {
-                        console.log('createAnswer failed:', err);
+                        
+                        // Create answer
+                        console.log('createAnswer start');
+                        return this._pc.createAnswer();
+                    }).then((answer) => {
+                        return this._onCreateAnswerSuccess(answer);
+                    }).catch((err) => {
+                        console.log(`SDP handling or setRemoteDescription/createAnswer failed:`, err);
                     });
                 } else {
                     this._pc.setRemoteDescription(sessionDesc, () => {
@@ -106,20 +125,6 @@ class WebRTCConnectionHandler {
         } else {
             console.dir(sessionDesc);
         }
-    }
-    
-    // When an answer has been created (via onSDPReceived), set it locally and send it to the peer
-    _onCreateAnswerSuccess(sessionDesc) {
-        const sDesc = JSON.stringify(sessionDesc);
-        console.log(`created answer: ${sDesc}`);
-        console.log('setLocalDescription start');
-        this._pc.setLocalDescription(sessionDesc, () => {
-            console.log('setLocalDescription complete');
-        }, (err) => {
-            console.log('setLocalDescription failed:', err);
-        });
-
-        signalling.sendAnswer(this.peerId, sessionDesc)
     }
 
     // When a remote peer has added a new media track, add it to the local audio element
