@@ -6,13 +6,9 @@
 </head>
 <body>
     <div id="app">
-      <span>Signaling status: {{signallingStatus}}</span>
+      <h2>Input</h2>
+      <span>Listen to sounds from other peers.</span>
       <br><br>
-      <span>Sending:</span><br>
-      <audio id="sendingAudioElement" muted controls src="audio/classic.mp3"></audio>
-      <!-- <audio id="sendingAudioElement" muted controls src="https://locus.creacast.com:9443/london_camberwell.ogg"></audio> -->
-      <br><br>
-      <span>Receiving:</span>
       <table>
           <tr>
             <th>Peer Id</th>
@@ -37,6 +33,36 @@
           <td><audio :id="`peerAudio_${ peer.id}`" controls></audio></td>
           </tr>
       </table>
+      <h2>Output</h2>
+      <span>Make sounds available for other peers to listen to.</span>
+      <br><br>
+      <input type="radio" name="output_type" value="device" checked>
+      <label>Audio device (microphone or soundcard)</label><br>
+      <br>
+      <input type="radio" name="output_type" value="local_file" disabled="disabled">
+      <label>Audio file</label><br>
+      &nbsp;&nbsp;<input type="file" id="local_file_picker">
+      <br><br>
+      <input type="radio" name="output_type" value="remote_file">
+      <label>Remote audio file or live stream</label><br>
+      &nbsp;&nbsp;url: <input type="text" id="remote_file_url" value="audio/classic.mp3"><br> <!-- https://locus.creacast.com:9443/london_camberwell.ogg-->
+      <br>
+      <input type="radio" name="output_type" value="relay" disabled="disabled">
+      <label>Relay input (whatever is playing in the input section above)</label>
+      <br><br>
+      <button v-if="outputEnabled" @click="setOutput(false)">Disconnect</button>
+      <button v-else @click="setOutput(true)">Connect</button>
+      <div v-if="outputEnabled">
+        <div v-if="outputSettings.type == 'local_file' || outputSettings.type == 'remote_file'">
+          <span>Audio output control: Others will only hear if it is playing and the volume is up.</span><br>
+          <audio controls :src="outputSettings.src" onplay="connectAudioElement(this)"></audio><br>
+        </div>
+        <span>Monitoring volume:</span><br>
+        <input id="monitoring_volume" onchange="setMonitoringVolume(this)" type="range" min="1" max="100" value="0">
+      </div>
+      <h2>Status</h2>
+      <span>Signaling: {{signallingStatus}}</span>
+      <br><br>
     </div>
 
     <script src="js/vue.global.js"></script>

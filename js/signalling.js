@@ -26,6 +26,7 @@ class Signaling {
 
             this._socket.on('peers', async ({peers: peers}) => {
                 this.peers = peers;
+                updateConnectionList(); //maybe not necessary
                 frontend.updatePeerList();
                 console.log("Peers: "+JSON.stringify(this.peers));
             });

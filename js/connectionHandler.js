@@ -45,6 +45,7 @@ class WebRTCConnectionHandler {
             return;
         }
         this._pc.close();
+        removeRemoteAudio(this.peerId);
     }
 
     // Create and configure this._pc
@@ -97,7 +98,9 @@ class WebRTCConnectionHandler {
 
                 if (this._isSender) {
                     this._createNewConnection();
-                    sendingAudioSource.getTracks().forEach((track) => this._pc.addTrack(track, sendingAudioSource));
+                    // ######################
+                    let inputStream = webAudioAPIDestination.stream;
+                    inputStream.getTracks().forEach((track) => this._pc.addTrack(track, inputStream));
                     console.log('added local stream to pc');
 
                     console.log("remote description:", sessionDesc);

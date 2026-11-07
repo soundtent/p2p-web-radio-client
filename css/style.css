@@ -4,9 +4,8 @@
 }
 html,body {
     padding:0;
-    margin:0;
+    margin:1rem 0rem 1rem 5rem;
     background-color:white;
-    overflow:hidden;
 }
 
 body {
