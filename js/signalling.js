@@ -27,7 +27,7 @@ class Signaling {
             this._socket.on('peers', async ({peers: peers}) => {
                 this.peers = peers;
                 updateConnectionList(); //maybe not necessary
-                frontend.updatePeerList();
+                frontend.updateConnectionList();
                 console.log("Peers: "+JSON.stringify(this.peers));
             });
 
@@ -40,15 +40,15 @@ class Signaling {
 
             this._socket.on('answer', async ({fromId, sessionDesc}) => {
                 console.log(`Received answer from ${fromId}`);
-                let connectionHandler = getConnectionHandlerByPeerId(fromId)
+                let connectionHandler = getConnectionHandlerByPeerId(fromId, false)
                 if (connectionHandler) {
                     connectionHandler.onSDPReceived(sessionDesc)
                 }
             });
 
-            this._socket.on('ice-candidate', async ({fromId, candidate}) => {
+            this._socket.on('ice-candidate', async ({fromId, fromIsSender, candidate}) => {
                 console.log("Received ICE candidate")
-                let connectionHandler = getConnectionHandlerByPeerId(fromId)
+                let connectionHandler = getConnectionHandlerByPeerId(fromId, !fromIsSender)
                 if (connectionHandler) {
                     connectionHandler.onCandidateReceived(candidate)
                 }
@@ -58,19 +58,19 @@ class Signaling {
         });
     }
     
-    sendOffer(targetPeerId, sessionDesc) {
+    sendOffer(peerId, sessionDesc) {
         console.log('Sending offer...');
-        this._socket.emit('offer', { targetPeerId: targetPeerId, sessionDesc: sessionDesc });
+        this._socket.emit('offer', { peerId: peerId, sessionDesc: sessionDesc });
     }
 
-    sendAnswer(targetPeerId, sessionDesc) {
+    sendAnswer(peerId, sessionDesc) {
         console.log('Sending answer...');
-        this._socket.emit('answer', { targetPeerId: targetPeerId, sessionDesc: sessionDesc });
+        this._socket.emit('answer', { peerId: peerId, sessionDesc: sessionDesc });
     }
 
-    sendIceCandidate(targetPeerId, candidate) {
+    sendIceCandidate(peerId, fromIsSender, candidate) {
         console.log('sending ICE candidate...');
-        this._socket.emit('ice-candidate', { targetPeerId: targetPeerId, candidate: candidate });
+        this._socket.emit('ice-candidate', { peerId: peerId, fromIsSender: fromIsSender, candidate: candidate});
     }
 
     disconnect() {

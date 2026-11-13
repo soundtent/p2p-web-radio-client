@@ -1,5 +1,5 @@
-function getConnectionHandlerByPeerId(peerId) {
-    return connectionHandlers.find(x => x.peerId === peerId);
+function getConnectionHandlerByPeerId(peerId, isSender) {
+    return connectionHandlers.find(x => x.peerId == peerId && x.isSender == isSender);
 }
 
 function initiateNewConnection(peerId) {
@@ -9,14 +9,14 @@ function initiateNewConnection(peerId) {
     connectionHandlers.push(newConnectionHandler);
 }
 
-function removeConnection(peerId) {
-    var connectionHandler = getConnectionHandlerByPeerId(peerId);
+function removeReceivingConnection(peerId) {
+    var connectionHandler = getConnectionHandlerByPeerId(peerId, false);
     connectionHandler.close();
 
     const index = connectionHandlers.indexOf(connectionHandler);
     connectionHandlers.splice(index, 1);
-    updateConnectionList
-    frontend.updatePeerList();
+    updateConnectionList();
+    frontend.updateConnectionList();
 }
 
 function updateConnectionList() {
@@ -32,7 +32,8 @@ function createFrontend() {
     let app = Vue.createApp({
         data() {
             return {
-                peers: [],
+                receivingConnections: [],
+                sendingConnections: [],
                 me: {},
                 signallingStatus: "offline",
                 outputEnabled: false,
@@ -40,16 +41,24 @@ function createFrontend() {
             }
         },
         methods: {
-            updatePeerList() {
-                this.peers = signalling.peers;
+            updateConnectionList() {
+                //copy without reference https://stackoverflow.com/questions/48219487/javascript-how-to-clone-array-without-reference
+                this.receivingConnections = JSON.parse(JSON.stringify(signalling.peers));
+                this.sendingConnections = JSON.parse(JSON.stringify(signalling.peers));
 
                 //get states from connectionHandlers
-                for (var i=0;i<this.peers.length;i++) {
-                    this.peers[i].connectionStatus = "disconnected";
+                for (var i=0;i<signalling.peers.length;i++) {
+                    this.receivingConnections[i].connectionStatus = "disconnected";
+                    this.sendingConnections[i].connectionStatus = "disconnected";
                 }
                 for (var i=0;i<connectionHandlers.length;i++) {
-                    var peer = this.peers.find(x => x.id === connectionHandlers[i].peerId);
-                    peer.connectionStatus = connectionHandlers[i].connectionStatus;
+                    if (connectionHandlers[i].isSender) {
+                        var peer = this.sendingConnections.find(x => x.id === connectionHandlers[i].peerId);
+                        peer.connectionStatus = connectionHandlers[i].connectionStatus;
+                    } else {
+                        var peer = this.receivingConnections.find(x => x.id === connectionHandlers[i].peerId);
+                        peer.connectionStatus = connectionHandlers[i].connectionStatus;
+                    }
                 }
             },
             setMe(me) {
@@ -68,21 +77,25 @@ function createFrontend() {
                     this.outputSettings = {
                         type: document.querySelector('input[name="output_type"]:checked').value
                     }
-                    if (this.outputSettings.type == "local_file") {
-                        this.outputSettings.src = document.getElementById('local_file_picker').value;
-                    } else if (this.outputSettings.type == "remote_file") {
+                    if (this.outputSettings.type == "remote_file") {
                         this.outputSettings.src = document.getElementById('remote_file_url').value;
                     } else if (this.outputSettings.type == "device") {
                         connectAudioDevice();
                     } else if (this.outputSettings.type == "relay") {
-                        // connectAudioRelay();
+                        let peerId = document.getElementById('relay_peerid').value;
+                        connectAudioRelay(peerId);
+                        
+                        //wait for Dom element to exist before initialising audio meter
+                        this.$nextTick(() => {
+                            initialiseAudioMeter('peakMeter_output', webAudioAPIOutputNode)
+                        });
                     }
                 } else {
                     disconnectAudio()
                 }
             },
             disconnect(id) {
-                removeConnection(id);
+                removeReceivingConnection(id);
             }
         }
     })
@@ -110,14 +123,16 @@ let outputConnected = false;
 const webAudioAPICtx = new AudioContext();
 const webAudioAPIDestination = webAudioAPICtx.createMediaStreamDestination();
 const webAudioAPIMonitoringGain = webAudioAPICtx.createGain();
-webAudioAPIMonitoringGain.gain.value = 0;
 webAudioAPIMonitoringGain.connect(webAudioAPICtx.destination);
 let webAudioAPIOutputNode = null;
+
+let peakMeters = {}; //uses socket id for keys
 
 let connectionHandlers = []
 const signalling = new Signaling();
 
 
 window.addEventListener("load", (event) => {
+    webAudioAPIMonitoringGain.gain.value = 0;
     main();
 });

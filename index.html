@@ -22,15 +22,18 @@
             <td></th>
             <td></th>
           </tr>
-          <tr v-for="peer in peers">
+          <tr v-for="peer in receivingConnections">
           <td>{{ peer.id }}</td>
           <td>{{ peer.geolocation }}</td>
           <td>
-            Status: {{ peer.connectionStatus}}<br>
+            Status: {{peer.connectionStatus}}<br>
             <button v-if="peer.connectionStatus=='disconnected'" @click="connect(peer.id)">Connect</button>
             <button v-else @click="disconnect(peer.id)">Disconnect</button>
           </td>
-          <td><audio :id="`peerAudio_${ peer.id}`" controls></audio></td>
+          <td>
+            <audio :id="`receivingAudio_${ peer.id}`" controls></audio>
+            <div :id="`peakMeter_${ peer.id}`" style="width: 100%; height: 50px; margin: 0;"></div>
+          </td>
           </tr>
       </table>
       <h2>Output</h2>
@@ -39,27 +42,43 @@
       <input type="radio" name="output_type" value="device" checked>
       <label>Audio device (microphone or soundcard)</label><br>
       <br>
-      <input type="radio" name="output_type" value="local_file" disabled="disabled">
-      <label>Audio file</label><br>
-      &nbsp;&nbsp;<input type="file" id="local_file_picker">
-      <br><br>
       <input type="radio" name="output_type" value="remote_file">
-      <label>Remote audio file or live stream</label><br>
-      &nbsp;&nbsp;url: <input type="text" id="remote_file_url" value="audio/classic.mp3"><br> <!-- https://locus.creacast.com:9443/london_camberwell.ogg-->
+      <label>Remote audio file or live stream (must be CORS enabled)</label><br>
+      &nbsp;&nbsp;url: <input type="text" id="remote_file_url" value="https://locus.creacast.com:9443/london_stave_hill.mp3"><br>
       <br>
-      <input type="radio" name="output_type" value="relay" disabled="disabled">
-      <label>Relay input (whatever is playing in the input section above)</label>
+      <input type="radio" name="output_type" value="relay">
+      <label>Relay input (whatever is playing in the input section above)</label><br>
+      &nbsp;&nbsp;input to relay: <select id="relay_peerid">
+        <option v-for="peer in receivingConnections.filter(x => x.connectionStatus==='connected')" :value="peer.id">{{peer.id}}</option>
+      </select>
+
       <br><br>
       <button v-if="outputEnabled" @click="setOutput(false)">Disconnect</button>
-      <button v-else @click="setOutput(true)">Connect</button>
+      <button v-else @click="setOutput(true)">Connect</button><br>
       <div v-if="outputEnabled">
         <div v-if="outputSettings.type == 'local_file' || outputSettings.type == 'remote_file'">
           <span>Audio output control: Others will only hear if it is playing and the volume is up.</span><br>
-          <audio controls :src="outputSettings.src" onplay="connectAudioElement(this)"></audio><br>
+          <audio crossorigin="anonymous" controls :src="outputSettings.src" onplay="connectAudioElement(this)"></audio><br>
         </div>
+        <div :id="`peakMeter_output`" style="width: 200px; height: 50px; margin: 0;"></div>
         <span>Monitoring volume:</span><br>
         <input id="monitoring_volume" onchange="setMonitoringVolume(this)" type="range" min="1" max="100" value="0">
       </div>
+      <br>
+      <table>
+          <tr>
+            <th>Peer Id</th>
+            <th>Location</th>
+            <th>Connection</th>
+          </tr>
+          <tr v-for="peer in sendingConnections">
+          <td>{{ peer.id }}</td>
+          <td>{{ peer.geolocation }}</td>
+          <td>
+            Status: {{ peer.connectionStatus}}
+          </td>
+          </tr>
+      </table>
       <h2>Status</h2>
       <span>Signaling: {{signallingStatus}}</span>
       <br><br>
@@ -68,6 +87,7 @@
     <script src="js/vue.global.js"></script>
     <script src="js/jquery.min.js"></script> 
     <script src="js/socket.io.min.js"></script>
+    <script src="js/web-audio-peak-meter-3.1.0.min.js"></script>
     <script src="js/connectionHandler.js"></script>
     <script src="js/signalling.js"></script>
     <script src="js/audio.js"></script>

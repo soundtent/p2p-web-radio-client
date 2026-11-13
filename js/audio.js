@@ -1,9 +1,12 @@
 // connect a new WebRTC MediaStream object with a local audio DOM element for playback
 function addRemoteAudio(mediaStream, fromId) {
-    var receivingAudioElement = document.getElementById("peerAudio_"+fromId);
+    var receivingAudioElement = document.getElementById("receivingAudio_"+fromId);
 
     if (receivingAudioElement.srcObject !== mediaStream) {
         receivingAudioElement.srcObject = mediaStream;
+
+        const sourceNode = webAudioAPICtx.createMediaStreamSource(mediaStream);
+        initialiseAudioMeter("peakMeter_"+fromId, sourceNode);
 
         receivingAudioElement.play().then(() => {
             console.log(`Playback started successfully for peer ${fromId}`);
@@ -15,11 +18,33 @@ function addRemoteAudio(mediaStream, fromId) {
 
 // remove a new WebRTC MediaStream object from a local audio DOM element for playback
 function removeRemoteAudio(fromId) {
-    var receivingAudioElement = document.getElementById("peerAudio_"+fromId);
+    var receivingAudioElement = document.getElementById("receivingAudio_"+fromId);
     if (receivingAudioElement) {
         receivingAudioElement.srcObject = null;
     }
 }
+
+//initialises the audio meter a particular peer input
+function initialiseAudioMeter(id, sourceNode) {
+    var peakMeterElement = document.getElementById(id);
+
+    if (webAudioAPICtx.state === 'suspended') {
+            webAudioAPICtx.resume();
+    }
+
+    //cleanup if already exists
+    if (id in peakMeters) {
+        peakMeters[id].cleanup();
+    }
+
+    let options = {
+        backgroundColor: "white",
+        borderSize: 0,
+        tickColor: "black"
+    };
+    peakMeters[id] = new webAudioPeakMeter.WebAudioPeakMeter(sourceNode, peakMeterElement, options);
+}
+
 
 //set up audioElement, waiting for it to be buffered before capturing
 function connectAudioElement(audioElement) {
@@ -51,6 +76,8 @@ function _connectAudioElement2(resolve, reject, audioElement) {
         //play audio locally through speakers
         webAudioAPIOutputNode.connect(webAudioAPIMonitoringGain);
 
+        initialiseAudioMeter('peakMeter_output', webAudioAPIOutputNode)
+
         outputConnected = true;
         console.log('Connected audio element to Web Audio API destination');
         resolve();
@@ -61,7 +88,9 @@ function _connectAudioElement2(resolve, reject, audioElement) {
 
 //remove any connections from the WebAudioAPI destinations
 function disconnectAudio() {
-    webAudioAPIOutputNode.disconnect()
+    if (webAudioAPIOutputNode) {
+        webAudioAPIOutputNode.disconnect()
+    }
     outputConnected = false;
     console.log('Disconnected audio element to Web Audio API destination');
 }
@@ -130,10 +159,29 @@ function _connectAudioDevice2(resolve, reject, mediaStream) {
         //play audio locally through speakers
         webAudioAPIOutputNode.connect(webAudioAPIMonitoringGain);
 
+        initialiseAudioMeter('peakMeter_output', webAudioAPIOutputNode)
+
         outputConnected = true;
         console.log('Connected audio device to Web Audio API destination');
         resolve();
     } catch (err) {
         reject(new Error(err.message));
+    }
+}
+
+function connectAudioRelay(peerId) {
+    if (!outputConnected) {
+        if (webAudioAPICtx.state === 'suspended') {
+            webAudioAPICtx.resume();
+        }
+        audioElement = document.getElementById("receivingAudio_"+peerId);
+        
+        // taking the stream directly from the audioElement.srcObject seems to work better than creating a createMediaElementSource on the audio player
+        webAudioAPIOutputNode = webAudioAPICtx.createMediaStreamSource(audioElement.srcObject);
+        webAudioAPIOutputNode.connect(webAudioAPIDestination);
+        webAudioAPIOutputNode.connect(webAudioAPIMonitoringGain);
+
+        outputConnected = true;
+        console.log('Connected relay to Web Audio API destination');
     }
 }

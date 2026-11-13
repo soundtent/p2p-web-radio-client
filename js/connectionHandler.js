@@ -2,7 +2,7 @@ class WebRTCConnectionHandler {
     constructor(isSender, peerId) {
         this.peerId = peerId;
         this.connectionStatus = "disconnected";
-        this._isSender = isSender; // true=sender, false=receiver
+        this.isSender = isSender; // true=sender, false=receiver
         this._iceServers = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -14,7 +14,7 @@ class WebRTCConnectionHandler {
 
     // Create and configure a new connection
     start() {
-        if (this._isSender) {
+        if (this.isSender) {
             // Sender won't initiate connection. Only the receiver does this
             return;
         }
@@ -56,7 +56,7 @@ class WebRTCConnectionHandler {
         this._pc.onicecandidate = (e) => this._onIceCandidate(e);
         this._pc.oniceconnectionstatechange = (e) => {
             this.connectionStatus = this._pc.iceConnectionState;
-            frontend.updatePeerList();
+            frontend.updateConnectionList();
         };
     }
 
@@ -96,7 +96,7 @@ class WebRTCConnectionHandler {
                 console.log('received %s', sessionDesc.type);
                 console.dir(sessionDesc);
 
-                if (this._isSender) {
+                if (this.isSender) {
                     this._createNewConnection();
                     // ######################
                     let inputStream = webAudioAPIDestination.stream;
@@ -140,7 +140,7 @@ class WebRTCConnectionHandler {
     // When an ice candidate has been added(via onCandidateReceived) then send it to the peer
     _onIceCandidate(event) {
         if (event.candidate) {
-            signalling.sendIceCandidate(this.peerId, event.candidate);
+            signalling.sendIceCandidate(this.peerId, this.isSender, event.candidate);
         } else {
             console.log('end of ICE candidate');
         }
