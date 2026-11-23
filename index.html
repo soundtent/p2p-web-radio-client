@@ -6,13 +6,15 @@
 </head>
 <body>
     <div id="app">
-      <h2>Input</h2>
+      <h2>P2P Web Radio</h2>
+      <span>This software allows you to send and receive sounds from and to other computers on the internet.<br><br>Since connections are made directly between peers, your internet connection matters. For instance, public or institutional wifi networks may use NAT or block WebRTC/UDP traffic, causing connections to fail.</span>
+      <h2>Receive Audio</h2>
       <span>Listen to sounds from other peers.</span>
       <br><br>
       <table>
           <tr>
             <th>Peer Id</th>
-            <th>Location</th>
+            <th>Location*</th>
             <th>Connection</th>
             <th>Audio</th>
           </tr>
@@ -35,8 +37,9 @@
             <div :id="`peakMeter_${ peer.id}`" style="width: 100%; height: 50px; margin: 0;"></div>
           </td>
           </tr>
-      </table>
-      <h2>Output</h2>
+      </table><br>
+      <span>* Location is estimated from peers' public-ip addresses (my ip: {{me.ip}}) using an <a href="https://www.npmjs.com/package/geoip-lite">open source geolocation database</a>. Results may be inaccurate.</span>
+      <h2>Send Audio</h2>
       <span>Make sounds available for other peers to listen to.</span>
       <br><br>
       <input type="radio" name="output_type" value="device" checked>
@@ -79,6 +82,8 @@
           </td>
           </tr>
       </table>
+      <h2>Chat</h2>
+      <iframe id="irc" height="500px" width="100%" style="border: 2px solid black" frameborder="0" border="0" marginwidth="0" marginheight="0" scrolling="default" src="https://irc.soundcamp.radio/?backgroundcolor=white&amp;primarycolor=black"></iframe>
       <h2>Status</h2>
       <span>Signaling: {{signallingStatus}}</span>
       <br><br>

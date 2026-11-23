@@ -1,24 +1,33 @@
  @font-face {
-	font-family: futuralight;
-    src: url('../fonts/futura light bt.ttf');
+	font-family: 'UniversLTPro';
+    src: url('../fonts/UniversLTPro-55Roman.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
 }
+
 html,body {
     padding:0;
     margin:1rem 0rem 1rem 5rem;
     background-color:white;
 }
+a {
+    color: black;
+}
 
 body {
-  font-family: futuralight;
-  font-size: 22px;
-  line-height: 26px;
+    font-family: futuralight;
+    font-family: UniversLTPro;
+    font-size: 16px;
+    line-height: 1.25rem;
+    letter-spacing: 0;
+    max-width: 800px;
 }
 
 table {
     border-collapse: collapse;
 }
 td, th {
-    border: 1px solid #dddddd;
+    border: 2px solid black;
     text-align: left;
     padding: 8px;
 }
